@@ -7,7 +7,7 @@
 const isStar = true;
 const DEFAULT_FREQ = 1;
 const DEFAULT_TIMES = Infinity;
-const COUNTER_START = 1;
+const COUNTER_START = 0;
 
 function getEventObjects(events, event) {
     return event in events ? events[event] : [];
@@ -39,12 +39,12 @@ function getSpecificEvents(events, event) {
 
 function executeEvents(eventObjects) {
     eventObjects.forEach((eventObj) => {
-        eventObj.execInfo.execCounter++;
         eventObj.execInfo.execCounter %= eventObj.execInfo.frequency;
         if (eventObj.execInfo.times > 0 && eventObj.execInfo.execCounter === 0) {
             eventObj.execInfo.times--;
             eventObj.handler.call(eventObj.context);
         }
+        eventObj.execInfo.execCounter++;
     });
 }
 
