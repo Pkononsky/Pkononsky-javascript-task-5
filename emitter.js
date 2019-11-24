@@ -6,7 +6,7 @@
  */
 const isStar = true;
 const DEFAULT_FREQ = 1;
-const DEFAULT_TIMES = -1;
+const DEFAULT_TIMES = Infinity;
 const COUNTER_START = 1;
 
 function getEventObjects(events, event) {
@@ -29,9 +29,6 @@ function getDefaultOrLeave(value, defaultValue) {
 
 function getSpecificEvents(events, event) {
     let specificEvents = [event];
-    if (event.includes('.')) {
-        return specificEvents;
-    }
     event += '.';
     specificEvents = specificEvents.concat(Object.keys(events).filter((eventName) => {
         return eventName.includes(event);
@@ -44,7 +41,7 @@ function executeEvents(eventObjects) {
     eventObjects.forEach((eventObj) => {
         eventObj.execInfo.execCounter++;
         eventObj.execInfo.execCounter %= eventObj.execInfo.frequency;
-        if (eventObj.execInfo.times !== 0 && eventObj.execInfo.execCounter === 0) {
+        if (eventObj.execInfo.times > 0 && eventObj.execInfo.execCounter === 0) {
             eventObj.execInfo.times--;
             eventObj.handler.call(eventObj.context);
         }
