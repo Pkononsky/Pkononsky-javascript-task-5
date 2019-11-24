@@ -29,6 +29,9 @@ function getDefaultOrLeave(value, defaultValue) {
 
 function getSpecificEvents(events, event) {
     let specificEvents = [event];
+    if (event.includes('.')) {
+        return specificEvents;
+    }
     event += '.';
     specificEvents = specificEvents.concat(Object.keys(events).filter((eventName) => {
         return eventName.includes(event);
