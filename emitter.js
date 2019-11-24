@@ -17,22 +17,35 @@ function getExecuteInformation(frequency, times) {
     return { frequency: frequency, execCounter: COUNTER_START, times: times };
 }
 
-function getNewEventObj(event, context, handler) {
-    return { event: event, context: context, handler: handler };
-}
-
-function subscribeToEvent(events, newEventData, frequency = DEFAULT_FREQ, times = DEFAULT_TIMES) {
-    let event = newEventData.event;
-    let context = newEventData.context;
-    let handler = newEventData.handler;
-
-    events[event] = getEventObjects(events, event);
+function createEventObject(context, handler, frequency = DEFAULT_FREQ, times = DEFAULT_TIMES) {
     let execInfo = getExecuteInformation(frequency, times);
-    events[event].push({ context: context, handler: handler, execInfo: execInfo });
+
+    return { context: context, handler: handler, execInfo: execInfo };
 }
 
 function getDefaultOrLeave(value, defaultValue) {
     return value <= 0 ? defaultValue : value;
+}
+
+function getSpecificEvents(events, event) {
+    let specificEvents = [event];
+    event += '.';
+    specificEvents = specificEvents.concat(Object.keys(events).filter((eventName) => {
+        return eventName.includes(event);
+    }));
+
+    return specificEvents;
+}
+
+function executeEvents(eventObjects) {
+    eventObjects.forEach((eventObj) => {
+        eventObj.execInfo.execCounter++;
+        eventObj.execInfo.execCounter %= eventObj.execInfo.frequency;
+        if (eventObj.execInfo.times !== 0 && eventObj.execInfo.execCounter === 0) {
+            eventObj.execInfo.times--;
+            eventObj.handler.call(eventObj.context);
+        }
+    });
 }
 
 /**
@@ -52,8 +65,8 @@ function getEmitter() {
          * @returns {Object} this
          */
         on: function (event, context, handler) {
-            let newEventData = getNewEventObj(event, context, handler);
-            subscribeToEvent(events, newEventData);
+            events[event] = getEventObjects(events, event);
+            events[event].push(createEventObject(context, handler));
 
             return this;
         },
@@ -65,8 +78,12 @@ function getEmitter() {
          * @returns {Object} this
          */
         off: function (event, context) {
-            events[event] = events[event].filter((eventObj) => {
-                return eventObj.context !== context;
+            let specificEvents = getSpecificEvents(events, event);
+
+            specificEvents.forEach((eventName) => {
+                events[eventName] = events[eventName].filter((eventObj) => {
+                    return eventObj.context !== context;
+                });
             });
 
             return this;
@@ -83,14 +100,7 @@ function getEmitter() {
             while (lastIndex--) {
                 let eventName = eventWords.slice(0, lastIndex).join('.');
                 let eventObjects = getEventObjects(events, eventName);
-                eventObjects.forEach((eventObj) => {
-                    eventObj.execInfo.execCounter++;
-                    eventObj.execInfo.execCounter %= eventObj.execInfo.frequency;
-                    if (eventObj.execInfo.times !== 0 && eventObj.execInfo.execCounter === 0) {
-                        eventObj.execInfo.times--;
-                        eventObj.handler.call(eventObj.context);
-                    }
-                });
+                executeEvents(eventObjects);
             }
 
             return this;
@@ -107,8 +117,8 @@ function getEmitter() {
          */
         several: function (event, context, handler, times) {
             times = getDefaultOrLeave(times, DEFAULT_TIMES);
-            let newEventData = getNewEventObj(event, context, handler);
-            subscribeToEvent(events, newEventData, DEFAULT_FREQ, times);
+            events[event] = getEventObjects(events, event);
+            events[event].push(createEventObject(context, handler, DEFAULT_FREQ, times));
 
             return this;
         },
@@ -124,8 +134,8 @@ function getEmitter() {
          */
         through: function (event, context, handler, frequency) {
             frequency = getDefaultOrLeave(frequency, DEFAULT_FREQ);
-            let newEventData = getNewEventObj(event, context, handler);
-            subscribeToEvent(events, newEventData, frequency, DEFAULT_TIMES);
+            events[event] = getEventObjects(events, event);
+            events[event].push(createEventObject(context, handler, frequency, DEFAULT_TIMES));
 
             return this;
         }
