@@ -31,7 +31,7 @@ function getSpecificEvents(events, event) {
     let specificEvents = [event];
     event += '.';
     specificEvents = specificEvents.concat(Object.keys(events).filter((eventName) => {
-        return eventName.includes(event);
+        return eventName.indexOf(event) === 0;
     }));
 
     return specificEvents;
