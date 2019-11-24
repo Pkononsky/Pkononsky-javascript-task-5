@@ -81,6 +81,10 @@ function getEmitter() {
             let specificEvents = getSpecificEvents(events, event);
 
             specificEvents.forEach((eventName) => {
+                let eventObjects = getEventObjects(events, eventName);
+                if (eventObjects.length === 0) {
+                    return false;
+                }
                 events[eventName] = events[eventName].filter((eventObj) => {
                     return eventObj.context !== context;
                 });
