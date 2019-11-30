@@ -5,29 +5,28 @@
  * Реализованы методы several и through
  */
 const isStar = true;
-const DEFAULT_FREQ = 1;
-const DEFAULT_TIMES = Infinity;
+const FREQ = 1;
+const TIMES = Infinity;
 const COUNTER_START = 0;
 
-function getEventObjects(events, event) {
-    return event in events ? events[event] : [];
+function getEventsByName(events, eventName) {
+    return events[eventName] || [];
 }
 
-function getExecuteInformation(frequency, times) {
-    return { frequency: frequency, execCounter: COUNTER_START, times: times };
-}
-
-function createEventObject(context, handler, frequency = DEFAULT_FREQ, times = DEFAULT_TIMES) {
-    let execInfo = getExecuteInformation(frequency, times);
-
-    return { context: context, handler: handler, execInfo: execInfo };
-}
-
-function getDefaultOrLeave(value, defaultValue) {
+function getAllowableValue(value, defaultValue) {
     return value <= 0 ? defaultValue : value;
 }
 
-function getSpecificEvents(events, event) {
+function createNewEventsList({ exEvents, context, handler, frequency = FREQ, times = TIMES }) {
+    times = getAllowableValue(times, TIMES);
+    frequency = getAllowableValue(frequency, FREQ);
+    let execInfo = { frequency, execCounter: COUNTER_START, times };
+    exEvents.push({ context, handler, execInfo });
+
+    return exEvents;
+}
+
+function getEventsByNameBeginning(events, event) {
     let specificEvents = [event];
     event += '.';
     specificEvents = specificEvents.concat(Object.keys(events).filter((eventName) => {
@@ -37,14 +36,14 @@ function getSpecificEvents(events, event) {
     return specificEvents;
 }
 
-function executeEvents(eventObjects) {
-    eventObjects.forEach((eventObj) => {
-        eventObj.execInfo.execCounter %= eventObj.execInfo.frequency;
-        if (eventObj.execInfo.times > 0 && eventObj.execInfo.execCounter === 0) {
-            eventObj.execInfo.times--;
-            eventObj.handler.call(eventObj.context);
+function executeEvents(events) {
+    events.forEach((event) => {
+        event.execInfo.execCounter %= event.execInfo.frequency;
+        if (event.execInfo.times > 0 && event.execInfo.execCounter === 0) {
+            event.execInfo.times--;
+            event.handler.call(event.context);
         }
-        eventObj.execInfo.execCounter++;
+        event.execInfo.execCounter++;
     });
 }
 
@@ -65,8 +64,13 @@ function getEmitter() {
          * @returns {Object} this
          */
         on: function (event, context, handler) {
-            events[event] = getEventObjects(events, event);
-            events[event].push(createEventObject(context, handler));
+            events[event] = createNewEventsList({
+                exEvents: getEventsByName(events, event),
+                context,
+                handler,
+                FREQ,
+                TIMES
+            });
 
             return this;
         },
@@ -78,12 +82,9 @@ function getEmitter() {
          * @returns {Object} this
          */
         off: function (event, context) {
-            let specificEvents = getSpecificEvents(events, event);
-
-            specificEvents.forEach((eventName) => {
-                let eventObjects = getEventObjects(events, eventName);
-                events[eventName] = eventObjects.filter((eventObj) => {
-                    return eventObj.context !== context;
+            getEventsByNameBeginning(events, event).forEach((eventName) => {
+                events[eventName] = getEventsByName(events, eventName).filter((val) => {
+                    return val.context !== context;
                 });
             });
 
@@ -100,8 +101,7 @@ function getEmitter() {
             let lastIndex = eventWords.length + 1;
             while (lastIndex--) {
                 let eventName = eventWords.slice(0, lastIndex).join('.');
-                let eventObjects = getEventObjects(events, eventName);
-                executeEvents(eventObjects);
+                executeEvents(getEventsByName(events, eventName));
             }
 
             return this;
@@ -117,9 +117,13 @@ function getEmitter() {
          * @returns {Object} this
          */
         several: function (event, context, handler, times) {
-            times = getDefaultOrLeave(times, DEFAULT_TIMES);
-            events[event] = getEventObjects(events, event);
-            events[event].push(createEventObject(context, handler, DEFAULT_FREQ, times));
+            events[event] = createNewEventsList({
+                exEvents: getEventsByName(events, event),
+                context,
+                handler,
+                FREQ,
+                times
+            });
 
             return this;
         },
@@ -134,9 +138,13 @@ function getEmitter() {
          * @returns {Object} this
          */
         through: function (event, context, handler, frequency) {
-            frequency = getDefaultOrLeave(frequency, DEFAULT_FREQ);
-            events[event] = getEventObjects(events, event);
-            events[event].push(createEventObject(context, handler, frequency, DEFAULT_TIMES));
+            events[event] = createNewEventsList({
+                exEvents: getEventsByName(events, event),
+                context,
+                handler,
+                frequency,
+                TIMES
+            });
 
             return this;
         }
